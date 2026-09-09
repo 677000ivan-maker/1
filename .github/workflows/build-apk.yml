@@ -36,6 +36,32 @@ jobs:
           unzip -q ZonaZabaykalya_Android_Compact.zip -d buildsrc
           rm -rf buildsrc/.github
 
+      - name: Improve toolbar visibility and accessibility
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('buildsrc/app/src/main/assets/index.html')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('<meta name="theme-color" content="#ede8de">','<meta name="theme-color" content="#292929">')
+          s=s.replace('--bar:rgba(244,240,232,.96);','--bar:#292929; --bar-text:#ffffff;')
+          s=s.replace('--bar:rgba(21,21,21,.96);','--bar:#111111; --bar-text:#ffffff;')
+          s=s.replace('height:58px;', 'height:72px;', 1)
+          s=s.replace('gap:8px;background:var(--bar);','gap:10px;background:var(--bar);')
+          s=s.replace('font-size:16px;flex:1;', 'font-size:20px;flex:1;color:var(--bar-text);')
+          s=s.replace('background:transparent;color:var(--text);font-family:system-ui,sans-serif;font-size:20px;min-width:44px;height:44px;', 'background:transparent;color:var(--bar-text);font-family:system-ui,sans-serif;font-size:28px;font-weight:700;min-width:58px;height:58px;')
+          s=s.replace('top:57px;', 'top:71px;')
+          s=s.replace('padding:86px 5.5vw 110px;', 'padding:100px 5.5vw 110px;')
+          s=s.replace('@media (max-width:600px){#reader{', '@media (max-width:600px){#reader{')
+          s=s.replace('#topbar .title{font-size:15px}', '#topbar .title{font-size:18px}')
+          p.write_text(s,encoding='utf-8')
+
+          p=Path('buildsrc/app/src/main/java/ru/zona/zabaykalya/MainActivity.java')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('import android.os.Bundle;', 'import android.os.Bundle;\nimport android.graphics.Color;')
+          s=s.replace('getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE);', 'getWindow().setStatusBarColor(Color.rgb(35,35,35));\n        getWindow().setNavigationBarColor(Color.rgb(35,35,35));\n        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE);')
+          p.write_text(s,encoding='utf-8')
+          PY
+
       - name: Build signed debug APK
         run: gradle -p buildsrc :app:assembleDebug --stacktrace
 
