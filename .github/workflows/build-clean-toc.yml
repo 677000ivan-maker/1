@@ -1,0 +1,62 @@
+name: Build clean TOC APK
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/build-clean-toc.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Prepare app
+        run: |
+          rm -rf buildsrc && mkdir buildsrc
+          unzip -q ZonaZabaykalya_Android_Compact.zip -d buildsrc
+          rm -rf buildsrc/.github
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          p=Path('buildsrc/app/src/main/assets/index.html')
+          s=p.read_text(encoding='utf-8')
+          s=s.replace('--bar:rgba(244,240,232,.96);','--bar:#e5c99a; --bar-text:#3a210f;')
+          s=s.replace('--bar:rgba(21,21,21,.96);','--bar:#9b7448; --bar-text:#ffffff;')
+          s=s.replace('height:58px;','height:64px;',1)
+          s=s.replace('font-size:16px;flex:1;','font-size:0;flex:1;color:var(--bar-text);')
+          s=s.replace('background:transparent;color:var(--text);font-family:system-ui,sans-serif;font-size:20px;min-width:44px;height:44px;','background:transparent;color:var(--bar-text);font-family:system-ui,sans-serif;font-size:27px;font-weight:800;min-width:50px;height:50px;padding:0 6px;border-radius:0;')
+          s=s.replace('top:57px;','top:63px;')
+          s=s.replace('padding:86px 5.5vw 110px;','padding:92px 5.5vw 110px;')
+          s=s.replace('#topbar .title{font-size:15px}','#topbar .title{font-size:0}')
+          clean=[('предисловие','Предисловие'),('последнее-письмо','Последнее письмо'),('глава-1.-начало','Глава 1. Начало'),('глава-2.-централ','Глава 2. Централ'),('глава-3.-судилище','Глава 3. Судилище'),('глава-4.-колония','Глава 4. Колония'),('глава-5.-закат-моего-солнца','Глава 5. Закат моего Солнца'),('послесловие','Послесловие')]
+          for target,title in clean:
+              pat=rf'<p><a href="#{re.escape(target)}">.*?</a></p>'
+              s,n=re.subn(pat,f'<p><a href="#{target}">{title}</a></p>',s,count=1,flags=re.S)
+              if n!=1: raise RuntimeError(title)
+          s=s.replace('<div class="title">Зона Забайкалья</div>','<div class="title"><img src="images/image1.jpg" alt="" style="height:48px;width:40px;object-fit:cover;border-radius:4px;display:block"></div>')
+          p.write_text(s,encoding='utf-8')
+          PY
+      - name: Build
+        run: gradle -p buildsrc :app:assembleDebug --stacktrace
+      - name: Verify APK
+        run: |
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose buildsrc/app/build/outputs/apk/debug/app-debug.apk
+          unzip -t buildsrc/app/build/outputs/apk/debug/app-debug.apk >/dev/null
+      - name: Package
+        run: cp buildsrc/app/build/outputs/apk/debug/app-debug.apk Zona-Zabaykalya-CLEAN-TOC-FIXED.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Zona-Zabaykalya-CLEAN-TOC-FIXED-APK
+          path: Zona-Zabaykalya-CLEAN-TOC-FIXED.apk
+          retention-days: 30
