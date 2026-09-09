@@ -1,4 +1,4 @@
-name: Build installable APK
+name: Build final protected APK
 
 on:
   push:
@@ -29,71 +29,68 @@ jobs:
         with:
           gradle-version: '8.10.2'
 
-      - name: Unpack book application
+      - name: Unpack application
         run: |
           rm -rf buildsrc
           mkdir buildsrc
           unzip -q ZonaZabaykalya_Android_Compact.zip -d buildsrc
           rm -rf buildsrc/.github
 
-      - name: Finalize UI and harden package
+      - name: Finalize UI and protect book
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          p=Path('buildsrc/app/src/main/assets/index.html')
-          s=p.read_text(encoding='utf-8')
-          s=s.replace('<meta name="theme-color" content="#ede8de">','<meta name="theme-color" content="#b58b55">')
-          s=s.replace('--bar:rgba(244,240,232,.96);','--bar:#e5c99a; --bar-text:#3a210f;')
-          s=s.replace('--bar:rgba(21,21,21,.96);','--bar:#9b7448; --bar-text:#ffffff;')
-          s=s.replace('height:58px;', 'height:64px;', 1)
-          s=s.replace('gap:8px;background:var(--bar);','gap:8px;background:var(--bar);')
-          s=s.replace('font-size:16px;flex:1;', 'font-size:0;flex:1;color:var(--bar-text);font-weight:700;')
-          s=s.replace('background:transparent;color:var(--text);font-family:system-ui,sans-serif;font-size:20px;min-width:44px;height:44px;', 'background:transparent;color:var(--bar-text);font-family:system-ui,sans-serif;font-size:27px;font-weight:800;min-width:52px;height:52px;border-radius:0;')
-          s=s.replace('top:57px;', 'top:63px;')
-          s=s.replace('padding:86px 5.5vw 110px;', 'padding:92px 5.5vw 110px;')
-          s=s.replace('#topbar .title{font-size:15px}', '#topbar .title{font-size:0}')
-          # clean visible TOC page numbers / markdown remnants only
-          replacements={
-            'Предисловие [3](#предисловие)':'Предисловие',
-            'Последнее письмо. [6](#последнее-письмо)':'Последнее письмо',
-            'Глава 1. Начало 7':'Глава 1. Начало',
-            'Глава 2. Централ 37':'Глава 2. Централ',
-            'Глава 3. Судилище 75':'Глава 3. Судилище',
-            'Глава 4. Колония 81':'Глава 4. Колония',
-            'Глава 5. Закат моего Солнца 92':'Глава 5. Закат моего Солнца',
-            'Послесловие 97':'Послесловие'
-          }
-          for a,b in replacements.items(): s=s.replace(a,b)
-          # use original cover art thumbnail already bundled as first image
-          s=s.replace('<span class="title">Зона Забайкалья</span>', '<span class="title"><img src="images/image1.png" alt="" style="height:48px;width:40px;object-fit:cover;border-radius:4px;display:block"></span>')
-          p.write_text(s,encoding='utf-8')
+          p = Path('buildsrc/app/src/main/assets/index.html')
+          s = p.read_text(encoding='utf-8')
+          s = s.replace('<meta name="theme-color" content="#ede8de">','<meta name="theme-color" content="#b58b55">')
+          s = s.replace('--bar:rgba(244,240,232,.96);','--bar:#e5c99a; --bar-text:#3a210f;')
+          s = s.replace('--bar:rgba(21,21,21,.96);','--bar:#9b7448; --bar-text:#ffffff;')
+          s = s.replace('height:58px;', 'height:64px;', 1)
+          s = s.replace('font-size:16px;flex:1;', 'font-size:0;flex:1;color:var(--bar-text);')
+          s = s.replace('background:transparent;color:var(--text);font-family:system-ui,sans-serif;font-size:20px;min-width:44px;height:44px;', 'background:transparent;color:var(--bar-text);font-family:system-ui,sans-serif;font-size:27px;font-weight:800;min-width:50px;height:50px;padding:0 6px;border-radius:0;')
+          s = s.replace('top:57px;', 'top:63px;')
+          s = s.replace('padding:86px 5.5vw 110px;', 'padding:92px 5.5vw 110px;')
+          s = s.replace('#topbar .title{font-size:15px}', '#topbar .title{font-size:0}')
+          for a,b in {
+              'Предисловие [3](#предисловие)':'Предисловие',
+              'Последнее письмо. [6](#последнее-письмо)':'Последнее письмо',
+              'Глава 1. Начало 7':'Глава 1. Начало',
+              'Глава 2. Централ 37':'Глава 2. Централ',
+              'Глава 3. Судилище 75':'Глава 3. Судилище',
+              'Глава 4. Колония 81':'Глава 4. Колония',
+              'Глава 5. Закат моего Солнца 92':'Глава 5. Закат моего Солнца',
+              'Послесловие 97':'Послесловие'
+          }.items():
+              s = s.replace(a,b)
+          s = s.replace('<span class="title">Зона Забайкалья</span>', '<span class="title"><img src="images/image1.png" alt="" style="height:48px;width:40px;object-fit:cover;border-radius:4px;display:block"></span>')
+          p.write_text(s, encoding='utf-8')
 
-          p=Path('buildsrc/app/src/main/java/ru/zona/zabaykalya/MainActivity.java')
-          s=p.read_text(encoding='utf-8')
-          s=s.replace('import android.os.Bundle;', 'import android.os.Bundle;\nimport android.graphics.Color;\nimport android.view.WindowManager;')
-          s=s.replace('getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE);', 'getWindow().setStatusBarColor(Color.rgb(181,139,85));\n        getWindow().setNavigationBarColor(Color.rgb(181,139,85));\n        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);\n        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE);')
-          p.write_text(s,encoding='utf-8')
+          p = Path('buildsrc/app/src/main/java/ru/zona/zabaykalya/MainActivity.java')
+          j = p.read_text(encoding='utf-8')
+          j = j.replace('import android.os.Bundle;', 'import android.os.Bundle;\nimport android.graphics.Color;\nimport android.view.WindowManager;\nimport java.io.ByteArrayOutputStream;\nimport java.io.InputStream;\nimport javax.crypto.Cipher;\nimport javax.crypto.spec.IvParameterSpec;\nimport javax.crypto.spec.SecretKeySpec;')
+          j = j.replace('getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE);', 'getWindow().setStatusBarColor(Color.rgb(181,139,85));\n        getWindow().setNavigationBarColor(Color.rgb(181,139,85));\n        getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);\n        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE);')
+          j = j.replace('else webView.loadUrl("file:///android_asset/index.html");', 'else loadProtectedBook();')
+          insert = '''\n    private void loadProtectedBook() {\n        try {\n            InputStream in = getAssets().open("book.dat");\n            ByteArrayOutputStream out = new ByteArrayOutputStream();\n            byte[] buf = new byte[8192]; int n;\n            while ((n = in.read(buf)) > 0) out.write(buf, 0, n);\n            in.close();\n            byte[] k = new byte[]{90,111,110,97,45,90,97,98,97,121,107,97,108,121,97,45,50,48,50,54,45,80,114,111,116,101,99,116,101,100,33,33};\n            byte[] v = new byte[]{50,48,50,54,48,57,48,57,90,79,78,65,65,80,75,33};\n            Cipher c = Cipher.getInstance("AES/CBC/PKCS5Padding");\n            c.init(Cipher.DECRYPT_MODE, new SecretKeySpec(k, "AES"), new IvParameterSpec(v));\n            String html = new String(c.doFinal(out.toByteArray()), "UTF-8");\n            webView.loadDataWithBaseURL("file:///android_asset/", html, "text/html", "UTF-8", null);\n        } catch (Exception e) {\n            webView.loadData("<html><body>Ошибка открытия книги</body></html>", "text/html", "UTF-8");\n        }\n    }\n'''
+          j = j.replace('\n    @Override protected void onSaveInstanceState', insert + '\n    @Override protected void onSaveInstanceState')
+          p.write_text(j, encoding='utf-8')
 
-          # release minification / resource shrinking
-          p=Path('buildsrc/app/build.gradle')
-          s=p.read_text(encoding='utf-8')
-          if 'minifyEnabled false' in s:
-              s=s.replace('minifyEnabled false','minifyEnabled true\n            shrinkResources true')
-          p.write_text(s,encoding='utf-8')
-
-          Path('buildsrc/app/proguard-rules.pro').write_text('''-optimizationpasses 5
--allowaccessmodification
--repackageclasses ''
--renamesourcefileattribute SourceFile
--keepattributes *Annotation*
-''',encoding='utf-8')
+          p = Path('buildsrc/app/build.gradle')
+          g = p.read_text(encoding='utf-8')
+          g = g.replace('minifyEnabled false', 'minifyEnabled true\n            shrinkResources true\n            signingConfig signingConfigs.debug')
+          p.write_text(g, encoding='utf-8')
+          Path('buildsrc/app/proguard-rules.pro').write_text('-optimizationpasses 5\n-allowaccessmodification\n-renamesourcefileattribute SourceFile\n-keepattributes *Annotation*\n', encoding='utf-8')
           PY
 
-      - name: Build installable hardened APK
-        run: gradle -p buildsrc :app:assembleDebug --stacktrace
+          KEYHEX=$(printf 'Zona-Zabaykalya-2026-Protected!!' | xxd -p -c 256)
+          IVHEX=$(printf '20260909ZONAAPK!' | xxd -p -c 256)
+          openssl enc -aes-256-cbc -K "$KEYHEX" -iv "$IVHEX" -in buildsrc/app/src/main/assets/index.html -out buildsrc/app/src/main/assets/book.dat
+          rm buildsrc/app/src/main/assets/index.html
+
+      - name: Build protected release APK
+        run: gradle -p buildsrc :app:assembleRelease --stacktrace
 
       - name: Rename APK
-        run: cp buildsrc/app/build/outputs/apk/debug/app-debug.apk Zona-Zabaykalya-FINAL.apk
+        run: cp buildsrc/app/build/outputs/apk/release/app-release.apk Zona-Zabaykalya-FINAL.apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
